@@ -5,151 +5,167 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        :root { --tg-bg: #1a1b1e; --primary: #0088cc; --gold: #ffeb3b; --card-bg: #25262b; --red: #ff4444; }
-        body { background: var(--tg-bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; background: #111; }
+        :root { 
+            --tg-bg: #050505; 
+            --primary: linear-gradient(45deg, #7f00ff, #e100ff); 
+            --accent: #00f2fe;
+            --card-bg: #1a1a1a; 
+            --red: #ff4444; 
+        }
+        body { background: var(--tg-bg); color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* UI Элементы */
+        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: #000; border-bottom: 1px solid #222; }
         .page { display: none; flex: 1; flex-direction: column; padding: 20px; text-align: center; overflow-y: auto; box-sizing: border-box; padding-bottom: 100px; }
         .active-page { display: flex; }
-        .video-box { background: #000; width: 100%; aspect-ratio: 16/9; border-radius: 20px; border: 2px solid #333; overflow: hidden; }
-        #video-player { width: 100%; height: 100%; }
-        .btn-action { background: var(--primary); border: none; color: white; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; }
-        input, select { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #0b0c0d; color: white; font-size: 16px; box-sizing: border-box; }
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .shop-item { background: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid #333; }
-        .btn-buy { background: #4caf50; border: none; color: white; padding: 10px; border-radius: 8px; width: 100%; margin-top: 5px; }
-        .nav-bar { background: #111; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; }
-        .nav-btn { color: #5c5f66; font-size: 10px; text-align: center; flex: 1; }
-        .nav-btn.active { color: var(--primary); }
-        .order-card { background: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 10px; text-align: left; border: 1px solid #333; }
+
+        /* Видео плеер */
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 15px; overflow: hidden; position: relative; border: 2px solid #333; box-shadow: 0 0 15px rgba(127, 0, 255, 0.3); }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        /* Кнопки */
+        .btn-action { background: var(--primary); border: none; color: white; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(127, 0, 255, 0.4); }
+        .btn-action:disabled { background: #333 !important; box-shadow: none; color: #777; cursor: not-allowed; }
+        
+        input { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #111; color: white; font-size: 16px; box-sizing: border-box; }
+        
+        /* Список заказов */
+        .order-card { background: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid #333; text-align: left; margin-bottom: 15px; position: relative; }
+        .order-title { font-weight: bold; color: var(--accent); margin-bottom: 5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .progress-bar { background: #333; height: 8px; border-radius: 4px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+        .btn-del { background: var(--red); border: none; color: white; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        /* Навигация */
+        .nav-bar { background: #000; display: flex; justify-content: space-around; padding: 10px 0 25px 0; border-top: 1px solid #222; position: fixed; bottom: 0; width: 100%; }
+        .nav-btn { color: #555; font-size: 10px; cursor: pointer; text-align: center; flex: 1; text-transform: uppercase; font-weight: bold; }
+        .nav-btn.active { color: var(--accent); }
     </style>
 </head>
 <body>
+
     <div class="header">
-        <div>🤖 UVIEW PRO</div>
-        <div style="color:var(--gold)">💰 <span id="coin-count">0</span></div>
+        <div style="font-weight: bold; letter-spacing: 1px;">🤖 VIEW PRO</div>
+        <div style="color:var(--accent); font-weight: bold;">💰 <span id="coin-count">0</span></div>
     </div>
 
     <div id="page-home" class="page active-page">
-        <div class="video-box"><div id="video-player"></div></div>
-        <div id="watch-controls" style="width:100%">
-            <button class="btn-action" id="watch-btn-text" onclick="startWatching()">▶ СМОТРЕТЬ</button>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-action" style="flex:1; background:#333" onclick="prevVid()">⬅</button>
-                <button class="btn-action" style="flex:1; background:#333" onclick="nextVid()">➡</button>
+        <div class="video-box" id="main-player-box">
+            <div id="player-render"></div>
+            <div id="start-overlay" style="display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer;" onclick="startWatching()">
+                <div style="background:var(--primary); padding:15px 30px; border-radius:30px; font-weight:bold;">▶ СМОТРЕТЬ</div>
             </div>
         </div>
-        <div id="timer-display" style="display:none; font-size:24px; color:var(--gold); margin-top:20px;">⏳ <span id="seconds">0</span> сек.</div>
+        <div id="timer-box" style="display:none; margin-top:20px;">
+            <div style="font-size:32px; color:var(--accent); font-weight:bold;"><span id="seconds">180</span> СЕК.</div>
+        </div>
     </div>
 
     <div id="page-upload" class="page">
-        <h3>НОВОЕ ЗАДАНИЕ</h3>
-        <input type="text" id="yt-url" placeholder="Ссылка на YouTube">
-        <input type="number" id="v-count" value="10" oninput="updPr()">
-        <select id="v-time" onchange="updPr()">
-            <option value="60">60 секунд</option>
-            <option value="180">180 секунд</option>
-            <option value="300">300 секунд</option>
-        </select>
-        <div style="margin:20px 0;">Итого: <span id="total-price" style="color:var(--gold)">1000</span> монет</div>
-        <button class="btn-action" onclick="uploadVid()">ОПУБЛИКОВАТЬ</button>
+        <h3 style="text-transform: uppercase;">🚀 Новое продвижение</h3>
+        <input type="text" id="yt-url" placeholder="Вставьте ссылку на YouTube" oninput="validateUpload()">
+        <input type="number" id="v-count" value="10" placeholder="Количество просмотров" oninput="validateUpload()">
+        <div style="margin:20px 0; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; border: 1px solid #333;">
+            <p>Длительность: 180 сек.</p>
+            <p>Стоимость: <b id="total-price">3000</b> 💰</p>
+        </div>
+        <button id="publish-btn" class="btn-action" onclick="createOrder()" disabled>ЗАГРУЗИТЬ</button>
     </div>
 
     <div id="page-orders" class="page">
-        <h3>📊 МОИ ЗАКАЗЫ</h3>
-        <div id="orders-list"></div>
-    </div>
-
-    <div id="page-shop" class="page">
-        <h3>🛒 МАГАЗИН</h3>
-        <div class="shop-grid">
-            <div class="shop-item"><b>5,000</b><br>$1.99<button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
-            <div class="shop-item"><b>15,000</b><br>$4.99<button class="btn-buy" onclick="buyProcess()">КУПИТЬ</button></div>
-        </div>
+        <h3 style="text-transform: uppercase;">📊 МОИ ЗАКАЗЫ</h3>
+        <div id="orders-list">Загрузка ваших видео...</div>
     </div>
 
     <div class="nav-bar">
         <div class="nav-btn active" onclick="tab('home', this)">🏠 ЛЕНТА</div>
-        <div class="nav-btn" onclick="tab('upload', this)">📷 ЗАГРУЗКА</div>
-        <div class="nav-btn" onclick="tab('orders', this); loadMyOrders();">📊 ЗАКАЗЫ</div>
-        <div class="nav-btn" onclick="tab('shop', this)">🛒 МАГАЗИН</div>
+        <div class="nav-btn" onclick="tab('upload', this)">📷 ЗАГРУЗИТЬ</div>
+        <div class="nav-btn" onclick="tab('orders', this); loadOrders();">📊 ЗАКАЗЫ</div>
     </div>
 
     <script>
-        // ВСТАВЬ НОВЫЕ ДАННЫЕ СЮДА
-       const S_URL = "ТВОЙ_НОВЫЙ_URL", 
-              S_KEY = "ТВОЙ_НОВЫЙ_KEY", 
-              sb = supabase.createClient(S_URL, S_KEY), tg = window.Telegram.WebApp;
+        // ДАННЫЕ СУПАБЕЙС (твои из кода)
+        const S_URL = "https://itmwgzryoeeehymbyrdz.supabase.co";
+        const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0bXdnenJ5b2VlZWh5bWJ5cmR6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODY2NzcxNywiZXhwIjoyMDg0MjQzNzE3fQ.YJNdFs468N3vIqzvEfQPzg_jAGXsx-rN8YDMqQX793g";
+        const sb = supabase.createClient(S_URL, S_KEY), tg = window.Telegram.WebApp;
 
-        let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", vids = [], curr = 0, coins = 0, player, timerId;
+        let userId = tg.initDataUnsafe?.user?.id?.toString() || "u_test", coins = 0;
 
         async function boot() {
             tg.expand();
             let { data: p } = await sb.from('profiles').select('*').eq('user_id', userId).single();
-            if (!p) {
-                await sb.from('profiles').insert([{ user_id: userId, coins: 500 }]);
-                coins = 500;
-            } else { coins = p.coins; }
+            if (p) { coins = p.coins; } 
+            else { coins = 500; await sb.from('profiles').insert([{user_id: userId, coins: 500}]); }
             document.getElementById('coin-count').innerText = coins;
-            refreshVids();
         }
 
-        async function refreshVids() {
-            let { data: v } = await sb.from('videos').select('*').gt('views_needed', 0);
-            vids = v || [];
-            if (vids.length > 0) updateVideoDisplay();
+        // --- ЛОГИКА ЗАКАЗА ---
+        function validateUpload() {
+            const url = document.getElementById('yt-url').value;
+            const count = document.getElementById('v-count').value;
+            const btn = document.getElementById('publish-btn');
+            
+            document.getElementById('total-price').innerText = count * 300;
+
+            if (url.length > 15 && url.includes('youtu')) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
         }
 
-        function onYouTubeIframeAPIReady() { boot(); }
-        
-        function updateVideoDisplay() { 
-            if(!vids[curr]) return;
-            const reward = Math.floor(vids[curr].duration / 60 * 50);
-            document.getElementById('watch-btn-text').innerText = `▶ СМОТРЕТЬ (+${reward} 💰)`;
-            if (player) { player.cueVideoById(vids[curr].youtube_id); }
-            else { player = new YT.Player('video-player', { height: '100%', width: '100%', videoId: vids[curr].youtube_id, playerVars: { 'controls': 1, 'rel': 0, 'playsinline': 1 } }); }
+        async function createOrder() {
+            const url = document.getElementById('yt-url').value;
+            const vidId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+            const count = parseInt(document.getElementById('v-count').value);
+            const price = count * 300;
+
+            if (coins < price) return tg.showAlert("Недостаточно монет!");
+
+            const { error } = await sb.from('videos').insert([{
+                youtube_id: vidId, views_needed: count, duration: 180, user_id: userId, views_done: 0
+            }]);
+
+            if (!error) {
+                coins -= price;
+                await sb.from('profiles').update({ coins }).eq('user_id', userId);
+                tg.showAlert("Видео успешно добавлено в ленту!");
+                tab('orders', document.querySelectorAll('.nav-btn')[2]);
+                loadOrders();
+            }
         }
 
-        function startWatching() {
-            if(!vids[curr]) return;
-            player.playVideo();
-            document.getElementById('watch-controls').style.display='none';
-            document.getElementById('timer-display').style.display='block';
-            let t = vids[curr].duration;
-            document.getElementById('seconds').innerText = t;
-            timerId = setInterval(() => {
-                t--; document.getElementById('seconds').innerText = t;
-                if(t <= 0) { clearInterval(timerId); player.pauseVideo(); finish(); }
-            }, 1000);
-        }
-
-        async function finish() {
-            const reward = Math.floor(vids[curr].duration / 60 * 50);
-            coins += reward;
-            await sb.from('profiles').update({ coins }).eq('user_id', userId);
-            await sb.from('videos').update({ views_done: vids[curr].views_done + 1, views_needed: vids[curr].views_needed - 1 }).eq('id', vids[curr].id);
-            tg.showAlert(`+${reward} монет!`);
-            location.reload();
-        }
-
-        async function loadMyOrders() {
+        // --- ОТОБРАЖЕНИЕ ЗАКАЗОВ ---
+        async function loadOrders() {
             const list = document.getElementById('orders-list');
             list.innerHTML = "Загрузка...";
-            let { data: myV } = await sb.from('videos').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-            list.innerHTML = (myV || []).map(v => `<div class="order-card"><b>ID: ${v.youtube_id}</b><br>Осталось: ${v.views_needed}</div>`).join('') || "Нет заказов";
+            let { data: myV } = await sb.from('videos').select('*').eq('user_id', userId);
+            
+            if (!myV || myV.length === 0) {
+                list.innerHTML = "<p style='color:#555'>У вас пока нет активных заказов</p>";
+                return;
+            }
+
+            list.innerHTML = myV.map(v => {
+                const percent = (v.views_done / v.views_needed) * 100;
+                return `
+                <div class="order-card">
+                    <span class="order-title">ID: ${v.youtube_id}</span>
+                    <small>Прогресс: ${v.views_done} из ${v.views_needed} просмотров</small>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percent}%"></div>
+                    </div>
+                    <button class="btn-del" onclick="deleteOrder(${v.id})">УДАЛИТЬ ЗАКАЗ</button>
+                </div>`;
+            }).join('');
         }
 
-        function updPr() { document.getElementById('total-price').innerText = Math.floor(document.getElementById('v-count').value * (document.getElementById('v-time').value / 60) * 100); }
-        
-        async function uploadVid() {
-            const url = document.getElementById('yt-url').value;
-            const vidId = url.includes('v=') ? url.split('v=')[1].split('&')[0] : url.split('/').pop().split('?')[0];
-            const price = parseInt(document.getElementById('total-price').innerText);
-            if (coins < price) return tg.showAlert("Мало монет!");
-            await sb.from('videos').insert([{ youtube_id: vidId, views_needed: parseInt(document.getElementById('v-count').value), duration: parseInt(document.getElementById('v-time').value), user_id: userId, views_done: 0 }]);
-            coins -= price; await sb.from('profiles').update({ coins }).eq('user_id', userId);
-            tg.showAlert("Опубликовано!"); location.reload();
+        async function deleteOrder(id) {
+            if (confirm("Удалить этот заказ? Потраченные монеты не возвращаются.")) {
+                await sb.from('videos').delete().eq('id', id);
+                loadOrders();
+            }
         }
 
         function tab(n, el) {
@@ -158,9 +174,8 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
         }
-        function nextVid() { if(vids.length) { curr = (curr + 1) % vids.length; updateVideoDisplay(); } }
-        function prevVid() { if(vids.length) { curr = (curr - 1 + vids.length) % vids.length; updateVideoDisplay(); } }
-        function buyProcess() { tg.openTelegramLink("https://t.me/CryptoBot?start=pay"); }
+
+        window.onload = boot;
     </script>
 </body>
 </html>
